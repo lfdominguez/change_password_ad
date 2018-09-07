@@ -1,0 +1,15 @@
+package: .
+import:
+- package: github.com/gobuffalo/packr
+  version: ^1.13.5
+- package: github.com/gorilla/csrf
+  version: ^1.5.1
+- package: github.com/gorilla/mux
+  version: ^1.6.2
+- package: github.com/micro/go-config
+  version: ^0.8.0
+  subpackages:
+  - source/file
+- package: github.com/nbutton23/zxcvbn-go
+  version: ^0.1.0
+- package: github.com/paleg/libadclient
