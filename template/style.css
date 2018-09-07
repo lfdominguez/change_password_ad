@@ -87,9 +87,10 @@ body {
   display:block
 }
 
-.message {
+#message {
   /*text-align: justify;*/
   display: none;
+  margin-bottom: 40px;
 }
 
 #fade {

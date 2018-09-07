@@ -199,7 +199,22 @@
       });
 
       xmlHttp.addEventListener("error", function(event) {
-        alert('Oops! Something went wrong.');
+        document.getElementById("message").innerHTML = "Ha ocurrido un error en el servidor. Por favor informe a su administrador de red sobre dicho suceso."
+
+        document.getElementById("fade").style.display = "none"
+        el = document.querySelector('.svg-icon-error')
+
+        el.classList.remove('is-animated');
+        setTimeout(function() {
+            el.classList.add('is-animated');
+
+            document.getElementById("message").style.display = "block"
+
+            setTimeout(function() {
+                el.classList.remove('is-animated');
+                document.getElementById("message").style.display = "none"
+            }, 7000);
+        }, 50);
       });
 
       xmlHttp.open("POST", "/changePassword");
