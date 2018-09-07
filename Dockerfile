@@ -7,6 +7,10 @@ RUN apk add --update --no-cache \
         wget \
         curl \
         git \
+        swig \
+        cyrus-sasl-dev \
+        openldap-dev \
+        krb5-dev \
     && wget "https://github.com/Masterminds/glide/releases/download/v0.13.1/glide-v0.13.1-`go env GOHOSTOS`-`go env GOHOSTARCH`.tar.gz" -O /tmp/glide.tar.gz \
     && mkdir /tmp/glide \
     && tar --directory=/tmp/glide -xvf /tmp/glide.tar.gz \
@@ -20,6 +24,9 @@ RUN apk add --update --no-cache \
 # production stage
 FROM alpine
 MAINTAINER ldominguezvega@gmail.com
+
+RUN apk add --update --no-cache libsasl krb5 libldap
+
 COPY --from=build-stage /go/src/github.com/lfdominguez/gobuild/ChangePasswordAD .
 
 EXPOSE "9090"
