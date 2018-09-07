@@ -1,78 +1,170 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
   "net/http"
   "strings"
   "log"
-  "bytes"
+  // "bytes"
+  "encoding/json"
+  // "io/ioutil"
+  "html/template"
 //   "os"
-//   "os/exec"
+  // "os/exec"
 
 	"github.com/gobuffalo/packr"
+  "github.com/gorilla/csrf"
+  "github.com/gorilla/mux"
+  "github.com/paleg/libadclient"
+  "github.com/micro/go-config"
+  "github.com/micro/go-config/source/file"
+  zxcvbn "github.com/nbutton23/zxcvbn-go"
 )
 
 var box = packr.NewBox("./template")
 
-
 func showIndex (w http.ResponseWriter, r *http.Request) {
-  r.ParseForm()
-  fmt.Println(r.Form)
-  fmt.Println("path", r.URL.Path)
-  fmt.Println("scheme", r.URL.Scheme)
-  fmt.Println(r.Form["url_long"])
-  for k, v := range r.Form {
-      fmt.Println("key:", k)
-      fmt.Println("val:", strings.Join(v, ""))
-  }
-  
-  if _, ok := r.Form["user"]; ok {
-    user := r.Form["user"]
-    old_pass := r.Form["old_pass"]
-    new_pass := r.Form["new_pass"]
-    retype_pass := r.Form["retype_pass"]
-    
-    fmt.Fprintf(w, "%s", user)
-    fmt.Fprintf(w, "%s", old_pass)
-    fmt.Fprintf(w, "%s", new_pass)
-    fmt.Fprintf(w, "%s", retype_pass)
-  }
-
-  
   w.Header().Set("Content-type", "text/html")
-  
+
   str, _ := box.MustString("index.html")
-  
-  fmt.Fprintf(w, "%s", str)
+
+  t := template.Must(template.New("index").Parse(str))
+
+  t.Execute(w, map[string]interface{}{
+    csrf.TemplateTag: csrf.TemplateField(r),
+  })
 }
 
-func sendLogo (w http.ResponseWriter, r *http.Request) {
-  bytesRead, _ := box.MustBytes("logo.png")
-  b := bytes.NewBuffer(bytesRead)
-  
-  w.Header().Set("Content-type", "image/png")
+func changePassword (w http.ResponseWriter, r *http.Request) {
+  r.ParseMultipartForm(0)
 
-  if _, err := b.WriteTo(w); err != nil {
-    fmt.Fprintf(w, "%s", err)
+  user := r.PostFormValue("user")
+  old_pass := r.PostFormValue("old_pass")
+  new_pass := r.PostFormValue("new_pass")
+
+  adclient.New()
+  defer adclient.Delete()
+
+  params := adclient.DefaultADConnParams()
+
+  var conf = config.Map()
+
+  params.Domain = conf["ad_domain"].(string)
+  params.Binddn = user + "@" + params.Domain;
+  params.Bindpw = old_pass
+
+  params.Secured = false;
+
+  params.Timelimit = 60
+  params.Nettimeout = 60
+
+  type Response struct {
+    Ok bool
+    Error string
   }
+
+  resp := Response{}
+
+  w.Header().Set("Content-Type", "application/json")
+  w.WriteHeader(http.StatusOK)
+
+  if err := adclient.Login(params); err != nil {
+    log.Println("Failed to AD login:", err)
+    if strings.Contains(err.Error(), "resolving") {
+      resp.Ok = false
+      resp.Error = "AD ADDRESS NOT RESOLVED"
+    }else{
+      resp.Ok = false
+      resp.Error = "USER AUTH FAILED"
+    }
+
+    respJson, _ := json.Marshal(resp)
+    w.Write(respJson)
+
+    adclient.Delete()
+
+    return
+  }
+
+  params.Binddn = conf["ad_admin_user"].(string) + "@" + params.Domain;
+  params.Bindpw = conf["ad_admin_pass"].(string)
+
+  if err := adclient.Login(params); err != nil {
+    log.Println("Failed to AD login:", err)
+    if strings.Contains(err.Error(), "resolving") {
+      resp.Ok = false
+      resp.Error = "AD ADDRESS NOT RESOLVED"
+    }else{
+      resp.Ok = false
+      resp.Error = "ADMIN AUTH FAILED"
+    }
+
+    respJson, _ := json.Marshal(resp)
+    log.Println("JSON:", respJson)
+    w.Write(respJson)
+
+    return
+  }
+
+  if err := adclient.SetUserPassword(user, new_pass); err != nil {
+    log.Println("Failed to Change password:", err)
+    if strings.Contains(err.Error(), "Constraint violation") {
+      resp.Ok = false
+      resp.Error = "CONTRAINS"
+    }else{
+      resp.Ok = false
+      resp.Error = "USER AUTH FAILED"
+    }
+
+    respJson, _ := json.Marshal(resp)
+    w.Write(respJson)
+
+    return
+  }
+
+  resp.Ok = true
+
+  respJson, _ := json.Marshal(resp)
+  w.Write(respJson)
 }
 
-func sendStyle (w http.ResponseWriter, r *http.Request) {
-  w.Header().Set("Content-type", "text/css")
-  
-  str, _ := box.MustString("style.css")
-  
-  fmt.Fprintf(w, "%s", str)
-}
+func checkPassword(w http.ResponseWriter, r *http.Request) {
+  type Password struct {
+    Password string `json:"-"`
+  }
 
+  password := Password{}
+
+  json.NewDecoder(r.Body).Decode(&password)
+
+  strength := zxcvbn.PasswordStrength(string(password.Password), nil)
+
+  w.Header().Set("Content-Type", "application/json")
+  w.WriteHeader(http.StatusOK)
+
+  respJson, _ := json.Marshal(strength)
+  w.Write(respJson)
+}
 
 func main() {
-  http.HandleFunc("/", showIndex)
-  http.HandleFunc("/logo.png", sendLogo)
-  http.HandleFunc("/style.css", sendStyle)
-  
-  err := http.ListenAndServe(":9090", nil) // set listen port
+  config.Load(file.NewSource(
+        file.WithPath("config.yml"),
+  ))
+
+  r := mux.NewRouter()
+
+  r.HandleFunc("/", showIndex)
+  r.HandleFunc("/changePassword", changePassword).Methods("POST")
+
+  r.Handle("/logo.png", http.FileServer(box))
+  r.Handle("/style.css", http.FileServer(box))
+  r.Handle("/juration.js", http.FileServer(box))
+  r.Handle("/zxcvbn.js", http.FileServer(box))
+
+  // CSRF := csrf.Protect([]byte(config.Map()['csrf_key']))
+
+  err := http.ListenAndServe(":9090", r/*CSRF(r)*/)
   if err != nil {
       log.Fatal("ListenAndServe: ", err)
   }
-} 
+}

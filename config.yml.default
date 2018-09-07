@@ -1,0 +1,4 @@
+csrf_key: this_is_a_super_secret_key
+ad_domain: domain
+ad_admin_user: admin
+ad_admin_pass: pass

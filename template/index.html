@@ -1,21 +1,220 @@
 <html lang="es">
 
 <head>
-  <link rel="stylesheet" media="all" href="style.css">
+  <title>Cambio de contrase&ntilde;a</title>
+  <link rel="stylesheet" media="all" href="style.css"/>
+
+  <script type="text/javascript" src="zxcvbn.js"></script>
+  <script type="text/javascript" src="juration.js"></script>
 </head>
 
 <body>
   <div class="login-page">
     <div class="form">
       <img id='logo' src='logo.png' />
-      <form class="login-form" method="POST" action="/">
-        <input name="user" type="text" placeholder="Usuario del dominio"/>
-        <input name="old_pass" type="password" placeholder="Contrase&ntilde;a vieja"/>
-        <input name="new_pass" type="password" placeholder="Contrase&ntilde;a nueva"/>
-        <input name="retype_pass" type="password" placeholder="Repetir Contrase&ntilde;a nueva"/>
+      <form class="login-form" id="data-form">
+        {{ .csrfField }}
+
+        <input id="user" name="user" type="text" placeholder="Usuario del dominio" required/>
+        <input name="old_pass" type="password" placeholder="Contrase&ntilde;a vieja" required/>
+        <div>
+          <input id="new_pass" name="new_pass" type="password" placeholder="Contrase&ntilde;a nueva" required/>
+          <div style="margin-top: -10px;">
+            <div class="strong" id="str1">
+            </div>
+            <div class="strong" id="str2">
+            </div>
+            <div class="strong" id="str3">
+            </div>
+            <div class="strong" id="str4">
+            </div>
+          </div>
+        </div>
+        <input id="retype_pass" name="retype_pass" type="password" placeholder="Repetir Contrase&ntilde;a nueva" required/>
         <button>Cambiar Contrase&ntilde;a</button>
       </form>
+      <div class="svg-icon-success">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90.27 90.27">
+          <defs>
+            <style>
+              .circle {
+                fill: #639939;
+              }
+              .circle-check {
+                fill: none;
+                stroke: #fff;
+                stroke-linecap: round;
+                stroke-miterlimit: 10;
+                stroke-width: 4px;
+              }
+            </style>
+          </defs>
+          <title>icon-success</title>
+          <circle class="circle" cx="45.14" cy="45.14" r="45.14"/>
+          <polyline class="circle-check" points="63.4 28.8 37.93 63.47 24.87 50.52"/>
+        </svg>
+      </div>
+      <div class="svg-icon-error">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90.27 90.27">
+          <defs>
+            <style>
+              .circle-2 {
+                fill: #f44336;
+              }
+              .x {
+                opacity: 0.5;
+              }
+              .x-single {
+                fill: #fff;
+              }
+            </style>
+          </defs>
+          <title>icon-error</title>
+          <circle class="circle-2" cx="45.14" cy="45.14" r="45.14"/>
+          <g class="x">
+            <rect class="x-single" x="21.77" y="43.49" width="46.74" height="3.36" transform="translate(-18.72 45.15) rotate(-45)"/>
+            <rect class="x-single" x="43.47" y="21.81" width="3.36" height="46.74" transform="translate(-18.72 45.16) rotate(-45)"/>
+          </g>
+        </svg>
+      </div>
+      <p id="message"></p>
     </div>
-  </div> 
+    <div id="fade" onclick="return false;">
+      <div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
+    </div>
+
+  </div>
+
+  <script type="text/javascript">
+    window.onload = function () {
+      document.getElementById("new_pass").onchange = validatePassword;
+      document.getElementById("new_pass").onkeyup = newPasswordTest
+      document.getElementById("retype_pass").onchange = validatePassword;
+    }
+
+    function newPasswordTest(value) {
+      result = zxcvbn(document.getElementById("new_pass").value, [document.getElementById("user").value])
+
+      if (result.score < 2)
+      {
+        document.getElementById("str1").style.display = "inline-block"
+        document.getElementById("str2").style.display = "none"
+        document.getElementById("str3").style.display = "none"
+        document.getElementById("str4").style.display = "none"
+      }else if (result.score < 3){
+        document.getElementById("str1").style.display = "none"
+        document.getElementById("str2").style.display = "inline-block"
+        document.getElementById("str3").style.display = "none"
+        document.getElementById("str4").style.display = "none"
+      }else if (result.score < 4){
+        document.getElementById("str1").style.display = "none"
+        document.getElementById("str2").style.display = "none"
+        document.getElementById("str3").style.display = "inline-block"
+        document.getElementById("str4").style.display = "none"
+      }else if (result.score < 5){
+        document.getElementById("str1").style.display = "none"
+        document.getElementById("str2").style.display = "none"
+        document.getElementById("str3").style.display = "none"
+        document.getElementById("str4").style.display = "inline-block"
+      }
+
+      console.log(juration.stringify(result.crack_times_seconds.online_no_throttling_10_per_second))
+    }
+
+    function validatePassword(){
+      var pass2=document.getElementById("retype_pass").value;
+      var pass1=document.getElementById("new_pass").value;
+
+      if(pass1!=pass2)
+        document.getElementById("retype_pass").setCustomValidity("No coinciden.");
+      else
+        document.getElementById("retype_pass").setCustomValidity('');
+    }
+
+    function submitFormAjax ()
+    {
+      var formData = new FormData(form);
+
+      document.getElementById("fade").style.display = "block"
+
+      var xmlHttp = new XMLHttpRequest();
+
+      xmlHttp.addEventListener("load", function(event) {
+        document.getElementById("fade").style.display = "none"
+
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+        {
+          var resp = JSON.parse(xmlHttp.responseText);
+          if (resp.Ok == false)
+          {
+            if (resp['Error'] == "AD ADDRESS NOT RESOLVED")
+            {
+              document.getElementById("message").innerHTML = "El servidor de dominio no se ha podido encontrar. Por favor informe a su administrador de red sobre dicho suceso. Disculpe los inconvenientes."
+            }
+            else if (resp['Error'] == "ADMIN AUTH FAILED")
+            {
+              document.getElementById("message").innerHTML = "Error de autenticaci&oacute;n por parte del administrador. Por favor informe a su administrador de red sobre dicho suceso. Disculpe los inconvenientes."
+            }
+            else if (resp['Error'] == "USER AUTH FAILED")
+            {
+              document.getElementById("message").innerHTML = "Error de autenticaci&oacute;n. Compruebe que sus credenciales sean las correctas."
+            }
+            else if (resp['Error'] == "CONTRAINS")
+            {
+              document.getElementById("message").innerHTML = "La contrase&ntilde;a que usted a generado no cumple con los requisitos m&iacute;nimos de complejidad."
+            }
+            else
+            {
+              document.getElementById("message").innerHTML = resp['Error'] + ". Por favor informe a su administrador de red sobre dicho suceso. Disculpe los inconvenientes."
+            }
+
+            el = document.querySelector('.svg-icon-error')
+
+            el.classList.remove('is-animated');
+            setTimeout(function() {
+              el.classList.add('is-animated');
+
+              document.getElementById("message").style.display = "block"
+
+              setTimeout(function() {
+                el.classList.remove('is-animated');
+                document.getElementById("message").style.display = "none"
+              }, 7000);
+            }, 50);
+          }
+          else
+          {
+            el = document.querySelector('.svg-icon-success')
+
+            el.classList.remove('is-animated');
+            setTimeout(function() {
+              el.classList.add('is-animated');
+
+              setTimeout(function() {
+                el.classList.remove('is-animated');
+              }, 2000);
+            }, 50);
+          }
+        }
+      });
+
+      xmlHttp.addEventListener("error", function(event) {
+        alert('Oops! Something went wrong.');
+      });
+
+      xmlHttp.open("POST", "/changePassword");
+      xmlHttp.send(formData);
+    }
+
+    // Access the form element...
+    var form = document.getElementById("data-form");
+
+    // ...and take over its submit event.
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      submitFormAjax();
+    });
+  </script>
 </body>
 </html>
