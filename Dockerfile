@@ -14,7 +14,7 @@ RUN apk add --update --no-cache \
     && export PATH=$PATH:/tmp/glide/`go env GOHOSTOS`-`go env GOHOSTARCH` \
     && glide update -v \
     && glide install \
-    && CGO_ENABLED=0 GOOS=`go env GOHOSTOS` GOARCH=`go env GOHOSTARCH` go build -o ChangePasswordAD \
+    && GOOS=`go env GOHOSTOS` GOARCH=`go env GOHOSTARCH` go build -o ChangePasswordAD \
     && apk del wget curl git
 
 # production stage
