@@ -11,6 +11,8 @@ RUN apk add --update --no-cache \
         cyrus-sasl-dev \
         openldap-dev \
         krb5-dev \
+        g++ \
+        make \
     && wget "https://github.com/Masterminds/glide/releases/download/v0.13.1/glide-v0.13.1-`go env GOHOSTOS`-`go env GOHOSTARCH`.tar.gz" -O /tmp/glide.tar.gz \
     && mkdir /tmp/glide \
     && tar --directory=/tmp/glide -xvf /tmp/glide.tar.gz \
