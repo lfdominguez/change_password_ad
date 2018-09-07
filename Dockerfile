@@ -27,7 +27,7 @@ RUN apk add --update --no-cache \
 FROM alpine
 MAINTAINER ldominguezvega@gmail.com
 
-RUN apk add --update --no-cache libsasl krb5 libldap
+RUN apk add --update --no-cache libsasl krb5 libldap libstdc++
 
 COPY --from=build-stage /go/src/github.com/lfdominguez/gobuild/ChangePasswordAD .
 
