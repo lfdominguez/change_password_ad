@@ -13,7 +13,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/micro/go-config"
 	"github.com/micro/go-config/source/file"
-	zxcvbn "github.com/nbutton23/zxcvbn-go"
 	"github.com/paleg/libadclient"
 )
 
@@ -119,24 +118,6 @@ func changePassword(w http.ResponseWriter, r *http.Request) {
 	resp.Ok = true
 
 	respJson, _ := json.Marshal(resp)
-	w.Write(respJson)
-}
-
-func checkPassword(w http.ResponseWriter, r *http.Request) {
-	type Password struct {
-		Password string `json:"-"`
-	}
-
-	password := Password{}
-
-	json.NewDecoder(r.Body).Decode(&password)
-
-	strength := zxcvbn.PasswordStrength(string(password.Password), nil)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	respJson, _ := json.Marshal(strength)
 	w.Write(respJson)
 }
 
