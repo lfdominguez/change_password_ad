@@ -1,4 +1,4 @@
-# change_password_ad
+# Web service to change domain users password
 
 [![Docker Repository on Quay](https://quay.io/repository/lfdominguez/ad_password_changer/status "Docker Repository on Quay")](https://quay.io/repository/lfdominguez/ad_password_changer)
 

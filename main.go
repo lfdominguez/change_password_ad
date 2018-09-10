@@ -77,8 +77,6 @@ func changePassword(w http.ResponseWriter, r *http.Request) {
 		respJson, _ := json.Marshal(resp)
 		w.Write(respJson)
 
-		adclient.Delete()
-
 		return
 	}
 
